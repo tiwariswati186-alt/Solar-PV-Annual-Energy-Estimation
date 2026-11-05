@@ -18,8 +18,8 @@ def load_model():
         with st.spinner("Downloading trained Random Forest model from cloud... Please wait."):
             
             file_id = "1R7AoySf_kji6q-eElrb9lpH_KxurUuw7"
-            url = f"https://google.com{file_id}"
-            gdown.download(url, model_path, quiet=False)
+            gdown.download(id=file_id, output=model_path, quiet=False)
+
             
     with open(model_path, "rb") as file:
         data = joblib.load(file)
