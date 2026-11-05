@@ -77,5 +77,5 @@ if st.button("🔮 Predict Annual Production"):
     prediction_kwh = np.expm1(pred_log)
     
     # Display Result
-    st.success(f"🔮 Estimated Annual Production: **{prediction_kwh:,.2f} kWh**")
-    st.info(f"⚡ Equivalent to approx **{prediction_kwh/1000:.2f} MWh** per year.")
+    st.success(f"🔮 Estimated Annual Production: **{prediction_kwh[0]:,.2f} kWh**")
+    st.info(f"⚡ Equivalent to approx **{prediction_kwh[0]/1000:.2f} MWh** per year.")
