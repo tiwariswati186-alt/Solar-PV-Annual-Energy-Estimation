@@ -4,20 +4,20 @@ import joblib
 import gdown
 import os
 
-# Page configuration aur styling
+
 st.set_page_config(page_title="Solar Energy Predictor", page_icon="☀️", layout="centered")
 
 st.title("☀️ Solar Energy Production Forecasting")
 st.markdown("Predict the annual energy production (kWh) for solar installations.")
 
-# Model automatically download karne ka logic Google Drive se
+
 @st.cache_resource
 def load_model():
     model_path = "solar_model.pkl"
     if not os.path.exists(model_path):
         with st.spinner("Downloading trained Random Forest model from cloud... Please wait."):
-            # Aapki asli Google Drive File ID yahan set kar di gayi hai
-            file_id = "1R7AoySf_kji6q-eElrb9lpH_KxurUuw7" 
+            
+            file_id = "1R7AoySf_kji6q-eElrb9lpH_KxurUuw7"
             url = f"https://google.com{file_id}"
             gdown.download(url, model_path, quiet=False)
             
