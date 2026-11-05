@@ -1,0 +1,12 @@
+Feature,Importance
+Estimated PV System Size (kWdc),45.13
+PV System Size (kWac),40.71
+kWdc_to_kWac_ratio,11.64
+Metering Method,1.93
+Utility,0.27
+Division,0.17
+interconnection_year,0.08
+Developer,0.06
+County,0.01
+interconnection_month,0.0
+has_storage,0.0

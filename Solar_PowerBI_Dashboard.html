@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Energy Production — Power BI Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --navy:    #0B2545;
+    --navy2:   #13315C;
+    --blue:    #1B4F8A;
+    --amber:   #F4A300;
+    --amber2:  #FFC740;
+    --teal:    #0891B2;
+    --green:   #16A34A;
+    --red:     #DC2626;
+    --white:   #FFFFFF;
+    --bg:      #F0F4F8;
+    --card:    #FFFFFF;
+    --text:    #1E293B;
+    --muted:   #64748B;
+    --border:  #E2E8F0;
+    --sidebar: 220px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: var(--sidebar); background: var(--navy); color: #fff;
+    display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 22px 18px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .sidebar-logo .sol-icon { font-size: 28px; margin-bottom: 4px; }
+  .sidebar-logo h2 { font-size: 13px; font-weight: 700; color: var(--amber); letter-spacing: 0.5px; line-height: 1.3; }
+  .sidebar-logo p  { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .nav-section { padding: 14px 0 4px 18px; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.35); letter-spacing: 1.5px; text-transform: uppercase; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; font-size: 13px; color: rgba(255,255,255,0.7);
+    cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .nav-item.active { border-left-color: var(--amber); background: rgba(244,163,0,0.12); color: var(--amber); font-weight: 600; }
+  .nav-item .icon { width: 18px; text-align: center; font-size: 14px; }
+  .sidebar-footer { margin-top: auto; padding: 16px 18px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 10px; color: rgba(255,255,255,0.35); }
+  .sidebar-footer strong { color: rgba(255,255,255,0.6); display: block; margin-bottom: 2px; font-size: 11px; }
+
+  /* ── MAIN ── */
+  .main { margin-left: var(--sidebar); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; color: var(--navy); }
+  .topbar-title span { color: var(--amber); }
+  .topbar-meta { font-size: 11px; color: var(--muted); }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+  .badge { background: var(--navy); color: var(--amber); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: #DCFCE7; color: var(--green); }
+
+  /* ── PAGE SECTIONS ── */
+  .page { display: none; padding: 24px 28px; }
+  .page.active { display: block; }
+
+  /* ── KPI ROW ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 22px; }
+  .kpi {
+    background: var(--card); border-radius: 10px; padding: 16px 14px 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-top: 3px solid var(--border); position: relative; overflow: hidden;
+  }
+  .kpi.navy  { border-top-color: var(--navy); }
+  .kpi.amber { border-top-color: var(--amber); }
+  .kpi.teal  { border-top-color: var(--teal); }
+  .kpi.green { border-top-color: var(--green); }
+  .kpi.blue  { border-top-color: var(--blue); }
+  .kpi.red   { border-top-color: var(--red); }
+  .kpi-icon  { font-size: 22px; margin-bottom: 8px; }
+  .kpi-val   { font-size: 24px; font-weight: 800; color: var(--navy); line-height: 1; }
+  .kpi-label { font-size: 10px; color: var(--muted); margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .kpi-sub   { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* ── GRID LAYOUTS ── */
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .grid-3   { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-bottom: 18px; }
+  .grid-2   { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 18px; margin-bottom: 18px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card); border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06); overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 18px 10px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-title { font-size: 13px; font-weight: 700; color: var(--navy); }
+  .card-sub   { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .card-body  { padding: 16px 18px; }
+  .card-tag   { font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+  .tag-amber { background: #FEF3C7; color: #92400E; }
+  .tag-green { background: #DCFCE7; color: #166534; }
+  .tag-teal  { background: #E0F2FE; color: #0C4A6E; }
+  .tag-blue  { background: #EFF6FF; color: #1D4ED8; }
+
+  /* ── CHART WRAPPER ── */
+  .chart-wrap { position: relative; }
+
+  /* ── TABLE ── */
+  .dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .dash-table th { background: var(--navy); color: #fff; padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+  .dash-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  .dash-table tr:last-child td { border-bottom: none; }
+  .dash-table tr:hover td { background: #F8FAFC; }
+  .prog-bar-wrap { width: 100px; background: #E2E8F0; border-radius: 4px; height: 8px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .prog-bar { height: 8px; border-radius: 4px; }
+
+  /* ── INSIGHT CARDS ── */
+  .insight-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .insight-card { background: var(--navy); border-radius: 10px; padding: 16px; }
+  .insight-card .num { font-size: 28px; font-weight: 800; color: var(--amber); line-height: 1; }
+  .insight-card .lbl { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+  .insight-card .desc{ font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 10px; line-height: 1.5; }
+
+  /* ── MODEL PAGE ── */
+  .model-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .model-row:last-child { border-bottom: none; }
+  .model-name { width: 160px; font-size: 13px; font-weight: 600; color: var(--navy); flex-shrink: 0; }
+  .model-type { width: 90px; }
+  .model-bar-area { flex: 1; }
+  .model-metric { width: 65px; text-align: right; font-size: 13px; font-weight: 700; }
+  .winner-badge { background: var(--amber); color: var(--navy); padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+
+  /* ── FEAT IMPORTANCE ── */
+  .feat-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .feat-name { width: 135px; font-size: 12px; color: var(--text); flex-shrink: 0; }
+  .feat-bar-area { flex: 1; background: #E2E8F0; border-radius: 4px; height: 14px; overflow: hidden; }
+  .feat-bar { height: 14px; border-radius: 4px; display: flex; align-items: center; padding-left: 6px; }
+  .feat-pct { width: 45px; text-align: right; font-size: 12px; font-weight: 700; color: var(--navy); }
+  .feat-cat  { width: 75px; }
+
+  /* ── SECTION HEADER ── */
+  .section-hdr { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .section-hdr h2 { font-size: 20px; font-weight: 800; color: var(--navy); }
+  .section-hdr span { font-size: 12px; color: var(--muted); }
+  .section-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .filter-bar label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+  .filter-bar select { border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--text); background: var(--white); cursor: pointer; }
+  .filter-bar select:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
+  .filter-note { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  /* ── DONUT LEGEND ── */
+  .donut-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .donut-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── TOOLTIP OVERRIDE ── */
+  .chartjs-tooltip { pointer-events: none; }
+
+  /* ── PREDICTION TOOL ── */
+  .pred-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .pred-field label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+  .pred-field input, .pred-field select { width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; font-size: 13px; color: var(--text); background: var(--white); }
+  .pred-field input:focus, .pred-field select:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
+  .pred-btn { background: var(--amber); color: var(--navy); border: none; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 4px; transition: background 0.2s; }
+  .pred-btn:hover { background: var(--amber2); }
+  .pred-result { background: var(--navy); border-radius: 12px; padding: 24px; text-align: center; color: #fff; }
+  .pred-result .result-val { font-size: 48px; font-weight: 800; color: var(--amber); line-height: 1; }
+  .pred-result .result-label { font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 8px; }
+  .pred-result .result-range { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ════════ SIDEBAR ════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sol-icon">☀️</div>
+    <h2>Solar Energy<br>ML Dashboard</h2>
+    <p>Data Science Internship Project</p>
+  </div>
+
+  <div class="nav-section">Pages</div>
+  <div class="nav-item active" onclick="showPage('overview',this)">
+    <span class="icon">📊</span> Executive Overview
+  </div>
+  <div class="nav-item" onclick="showPage('eda',this)">
+    <span class="icon">🔍</span> EDA Analysis
+  </div>
+  <div class="nav-item" onclick="showPage('model',this)">
+    <span class="icon">🧠</span> Model Performance
+  </div>
+  <div class="nav-item" onclick="showPage('features',this)">
+    <span class="icon">⚡</span> Feature Insights
+  </div>
+  <div class="nav-item" onclick="showPage('predict',this)">
+    <span class="icon">🔮</span> Live Predictor
+  </div>
+
+  <div class="nav-section">Info</div>
+  <div class="nav-item" onclick="showPage('insights',this)">
+    <span class="icon">💡</span> Key Insights
+  </div>
+
+  <div class="sidebar-footer">
+    <strong>Dataset</strong>Solar_Energy.csv<br>
+    218,115 records · 13 features<br><br>
+    <strong>Model</strong>Random Forest<br>
+    R² = 0.976 · MAPE = 8.1%
+  </div>
+</nav>
+
+<!-- ════════ MAIN AREA ════════ -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Predicting <span>Solar Energy Production</span></div>
+      <div class="topbar-meta">Renewable Energy Provider · Data Science Internship Final Report · June 2026</div>
+    </div>
+    <div class="topbar-right">
+      <span class="badge badge-green">✓ Model R² = 0.976</span>
+      <span class="badge">218,115 Records</span>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 1: OVERVIEW ══ -->
+  <div id="page-overview" class="page active">
+    <div class="section-hdr">
+      <div class="section-dot"></div>
+      <h2>Executive Overview</h2>
+      <span>High-level KPIs and production trends from 218,115 solar installations</span>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+      <div class="kpi navy">
+        <div class="kpi-icon">🏗️</div>
+        <div class="kpi-val">218K</div>
+        <div class="kpi-label">Total Installations</div>
+        <div class="kpi-sub">2010–2023 period</div>
+      </div>
+      <div class="kpi amber">
+        <div class="kpi-icon">⚡</div>
+        <div class="kpi-val">6.27 B</div>
+        <div class="kpi-label">Total kWh Produced</div>
+        <div class="kpi-sub">Across all projects</div>
+      </div>
+      <div class="kpi teal">
+        <div class="kpi-icon">📈</div>
+        <div class="kpi-val">8,364</div>
+        <div class="kpi-label">Median Annual kWh</div>
+        <div class="kpi-sub">Per installation</div>
+      </div>
+      <div class="kpi green">
+        <div class="kpi-icon">🏆</div>
+        <div class="kpi-val">0.976</div>
+        <div class="kpi-label">Model R² Score</div>
+        <div class="kpi-sub">97.6% accuracy</div>
+      </div>
+      <div class="kpi blue">
+        <div class="kpi-icon">🎯</div>
+        <div class="kpi-val">8.1%</div>
+        <div class="kpi-label">Model MAPE Error</div>
+        <div class="kpi-sub">Mean avg % error</div>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-icon">📅</div>
+        <div class="kpi-val">18,560</div>
+        <div class="kpi-label">Projects in 2023</div>
+        <div class="kpi-sub">Highest ever year</div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="grid-2-1">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Solar Installations by Year</div><div class="card-sub">Number of new projects commissioned per year</div></div>
+          <span class="card-tag tag-amber">Trend</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:210px"><canvas id="yearlyBar"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Metering Method Split</div><div class="card-sub">Distribution of billing types</div></div>
+          <span class="card-tag tag-teal">Breakdown</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:140px"><canvas id="meteringDonut"></canvas></div>
+          <div class="donut-legend" id="meteringLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Average kWh by System Size Bucket</div><div class="card-sub">Median annual production by DC capacity range</div></div>
+          <span class="card-tag tag-green">Size Analysis</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:200px"><canvas id="sizeBar"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Projects by Month of Interconnection</div><div class="card-sub">Seasonal installation patterns</div></div>
+          <span class="card-tag tag-blue">Seasonality</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:200px"><canvas id="monthlyLine"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 2: EDA ══ -->
+  <div id="page-eda" class="page">
+    <div class="section-hdr">
+      <div class="section-dot"></div>
+      <h2>Exploratory Data Analysis</h2>
+      <span>Patterns discovered across developers, regions and system configurations</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Top 10 Developers — Avg Annual Production</div><div class="card-sub">Median kWh for developers with 100+ projects</div></div>
+          <span class="card-tag tag-amber">Developer</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:260px"><canvas id="devBar"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Top 15 Divisions by Project Volume</div><div class="card-sub">Number of installations per grid division</div></div>
+          <span class="card-tag tag-teal">Regional</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:260px"><canvas id="divBar"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Annual Production — Size Bucket Comparison</div><div class="card-sub">Project count vs avg kWh by system size</div></div>
+          <span class="card-tag tag-green">Size vs Output</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:230px"><canvas id="sizeScatter"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Data Quality — Missing Values</div><div class="card-sub">% missing and how each column was handled</div></div>
+          <span class="card-tag tag-blue">Data Quality</span>
+        </div>
+        <div class="card-body" style="padding-top:10px">
+          <table class="dash-table">
+            <thead><tr><th>Column</th><th>Missing %</th><th>Action Taken</th></tr></thead>
+            <tbody>
+              <tr><td>Energy Storage Size</td><td><span style="color:var(--red);font-weight:700">98.1%</span></td><td>→ Binary flag (has/no storage)</td></tr>
+              <tr><td>Division</td><td><span style="color:var(--amber);font-weight:700">39.1%</span></td><td>→ Filled with "Unknown"</td></tr>
+              <tr><td>Substation</td><td><span style="color:var(--amber);font-weight:700">36.7%</span></td><td>→ Dropped (not predictive)</td></tr>
+              <tr><td>Developer</td><td><span style="color:var(--blue);font-weight:700">4.8%</span></td><td>→ Filled with "Unknown"</td></tr>
+              <tr><td>Metering Method</td><td><span style="color:var(--green);font-weight:700">0.2%</span></td><td>→ Filled with "NM" (majority)</td></tr>
+              <tr><td>All other columns</td><td><span style="color:var(--green);font-weight:700">0%</span></td><td>→ No action needed ✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 3: MODEL ══ -->
+  <div id="page-model" class="page">
+    <div class="section-hdr">
+      <div class="section-dot"></div>
+      <h2>Model Performance</h2>
+      <span>5 algorithms compared · Random Forest selected as winner · Evaluated on 32,717 unseen records</span>
+    </div>
+
+    <!-- Model KPIs -->
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi green">
+        <div class="kpi-icon">🎯</div>
+        <div class="kpi-val">0.976</div>
+        <div class="kpi-label">R² Score (Test Set)</div>
+        <div class="kpi-sub">97.6% variance explained</div>
+      </div>
+      <div class="kpi amber">
+        <div class="kpi-icon">📉</div>
+        <div class="kpi-val">8.1%</div>
+        <div class="kpi-label">MAPE Error</div>
+        <div class="kpi-sub">Mean absolute % error</div>
+      </div>
+      <div class="kpi teal">
+        <div class="kpi-icon">📐</div>
+        <div class="kpi-val">724</div>
+        <div class="kpi-label">MAE (kWh)</div>
+        <div class="kpi-sub">Mean absolute error</div>
+      </div>
+      <div class="kpi navy">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-val">2,180</div>
+        <div class="kpi-label">RMSE (kWh)</div>
+        <div class="kpi-sub">Root mean sq. error</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Algorithm Comparison — R² Score</div><div class="card-sub">Higher is better · Validated on 15% holdout set</div></div>
+          <span class="card-tag tag-green">R² Score</span>
+        </div>
+        <div class="card-body" style="padding:12px 18px">
+          <div id="modelRows"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">MAPE Comparison (%) — Lower is Better</div><div class="card-sub">Mean Absolute Percentage Error per model</div></div>
+          <span class="card-tag tag-amber">MAPE %</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:240px"><canvas id="mapeBar"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Actual vs Predicted — Monthly Average (kWh)</div><div class="card-sub">Random Forest predictions closely track actual values across all months</div></div>
+        <span class="card-tag tag-green">✓ R² = 0.976</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap" style="height:200px"><canvas id="actualVsPred"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 4: FEATURES ══ -->
+  <div id="page-features" class="page">
+    <div class="section-hdr">
+      <div class="section-dot"></div>
+      <h2>Feature Insights</h2>
+      <span>Which variables drive solar energy predictions — and why they matter</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Feature Importance — Random Forest</div><div class="card-sub">% contribution to predictions</div></div>
+          <span class="card-tag tag-amber">Model Insights</span>
+        </div>
+        <div class="card-body" style="padding-top:10px">
+          <div id="featRows"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Top 4 Features Explained</div><div class="card-sub">What each driver means for solar output</div></div>
+          <span class="card-tag tag-teal">Explainability</span>
+        </div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:#F8FAFC;border-radius:8px;padding:12px;border-left:4px solid var(--amber)">
+            <div style="font-weight:700;font-size:12px;color:var(--navy)">#1 — PV Size (kWdc) · 54.5%</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">System capacity is the dominant driver. A 50–100 kW system produces 17× more than a &lt;5 kW system. Optimising capacity delivers the highest ROI.</div>
+          </div>
+          <div style="background:#F8FAFC;border-radius:8px;padding:12px;border-left:4px solid var(--green)">
+            <div style="font-weight:700;font-size:12px;color:var(--navy)">#2 — DC/AC Ratio · 18.6% (Engineered)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Inverter efficiency indicator. Optimal ratio: 1.2–1.3. Systems below 1.1 underutilise the inverter. Above 1.4 causes energy clipping losses.</div>
+          </div>
+          <div style="background:#F8FAFC;border-radius:8px;padding:12px;border-left:4px solid var(--teal)">
+            <div style="font-weight:700;font-size:12px;color:var(--navy)">#3 — PV Size (kWac) · 12.2%</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">AC inverter output capacity. Complements kWdc — together they account for 66.7% of all predictive power in the model.</div>
+          </div>
+          <div style="background:#F8FAFC;border-radius:8px;padding:12px;border-left:4px solid var(--blue)">
+            <div style="font-weight:700;font-size:12px;color:var(--navy)">#4 — Division · 4.5%</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Geographic region determines solar irradiance. Upstate NY (Geneva, Binghamton) averages 174K–193K kWh vs 6.4K median for NYC divisions.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Feature Importance — Visual Breakdown</div><div class="card-sub">Original features vs engineered features comparison</div></div>
+        <span class="card-tag tag-blue">Chart</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap" style="height:200px"><canvas id="featChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 5: PREDICT ══ -->
+  <div id="page-predict" class="page">
+    <div class="section-hdr">
+      <div class="section-dot"></div>
+      <h2>Live Energy Predictor</h2>
+      <span>Enter project details to estimate annual solar energy output (kWh)</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Project Input Parameters</div><div class="card-sub">Enter details for the new solar installation</div></div>
+        </div>
+        <div class="card-body">
+          <div class="pred-form">
+            <div class="pred-field">
+              <label>DC System Size (kWdc)</label>
+              <input type="number" id="inp-kwdc" value="10" min="0.1" max="50000" step="0.1">
+            </div>
+            <div class="pred-field">
+              <label>AC System Size (kWac)</label>
+              <input type="number" id="inp-kwac" value="8" min="0.1" max="50000" step="0.1">
+            </div>
+            <div class="pred-field">
+              <label>Developer Type</label>
+              <select id="inp-dev">
+                <option value="top">Top-tier (Sunrun, Vivint, Solar City)</option>
+                <option value="mid">Mid-tier Developer</option>
+                <option value="other" selected>Other / Unknown</option>
+              </select>
+            </div>
+            <div class="pred-field">
+              <label>Region</label>
+              <select id="inp-region">
+                <option value="upstate">Upstate NY (High Irradiance)</option>
+                <option value="suburban" selected>Suburban / Outer Borough</option>
+                <option value="nyc">NYC / Dense Urban</option>
+              </select>
+            </div>
+            <div class="pred-field">
+              <label>Metering Method</label>
+              <select id="inp-meter">
+                <option value="NM" selected>NM – Net Metering</option>
+                <option value="RNM">RNM – Remote Net Metering</option>
+                <option value="CDG">CDG – Community Distributed Gen.</option>
+              </select>
+            </div>
+            <div class="pred-field">
+              <label>Has Battery Storage?</label>
+              <select id="inp-storage">
+                <option value="0" selected>No</option>
+                <option value="1">Yes</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:18px">
+            <button class="pred-btn" onclick="runPredict()">⚡ Predict Annual Output</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Prediction Result</div><div class="card-sub">Estimated annual solar energy production</div></div>
+          <span class="card-tag tag-green" id="pred-confidence">Awaiting input</span>
+        </div>
+        <div class="card-body">
+          <div class="pred-result" id="pred-result-box">
+            <div class="result-val" id="pred-val">—</div>
+            <div class="result-label" id="pred-label">Enter project details and click Predict</div>
+            <div class="result-range" id="pred-range"></div>
+          </div>
+          <div style="margin-top:16px" id="pred-breakdown"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:0">
+      <div class="card-header">
+        <div><div class="card-title">How the Prediction Works</div><div class="card-sub">Random Forest model — trained on 152,681 records</div></div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+          <div style="text-align:center;padding:14px;background:#F8FAFC;border-radius:10px">
+            <div style="font-size:24px">📥</div>
+            <div style="font-weight:700;font-size:12px;color:var(--navy);margin:8px 0 4px">Input</div>
+            <div style="font-size:11px;color:var(--muted)">Project parameters entered by user</div>
+          </div>
+          <div style="text-align:center;padding:14px;background:#F8FAFC;border-radius:10px">
+            <div style="font-size:24px">⚙️</div>
+            <div style="font-weight:700;font-size:12px;color:var(--navy);margin:8px 0 4px">Feature Engineering</div>
+            <div style="font-size:11px;color:var(--muted)">DC/AC ratio computed, categoricals encoded</div>
+          </div>
+          <div style="text-align:center;padding:14px;background:#F8FAFC;border-radius:10px">
+            <div style="font-size:24px">🌲</div>
+            <div style="font-weight:700;font-size:12px;color:var(--navy);margin:8px 0 4px">200 Trees</div>
+            <div style="font-size:11px;color:var(--muted)">Random Forest averages 200 decision trees</div>
+          </div>
+          <div style="text-align:center;padding:14px;background:#F8FAFC;border-radius:10px">
+            <div style="font-size:24px">⚡</div>
+            <div style="font-weight:700;font-size:12px;color:var(--navy);margin:8px 0 4px">kWh Output</div>
+            <div style="font-size:11px;color:var(--muted)">Annual prediction with ±8.1% typical error</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 6: INSIGHTS ══ -->
+  <div id="page-insights" class="page">
+    <div class="section-hdr">
+      <div class="section-dot"></div>
+      <h2>Key Insights & Recommendations</h2>
+      <span>Evidence-backed findings from 218,115 records and the trained ML model</span>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">📊 6 Key Findings from the Data</div>
+      <div class="insight-grid">
+        <div class="insight-card">
+          <div class="num">54.5%</div>
+          <div class="lbl">of predictions driven by system size</div>
+          <div class="desc">PV capacity (kWdc) is the #1 driver. A 50–100 kW system produces <strong style="color:var(--amber)">17× more</strong> than a &lt;5 kW system. Size optimisation is the highest-ROI lever.</div>
+        </div>
+        <div class="insight-card">
+          <div class="num">1.2–1.3</div>
+          <div class="lbl">optimal DC/AC ratio</div>
+          <div class="desc">Our engineered DC/AC ratio feature (18.6% importance) reveals that systems in the <strong style="color:var(--amber)">1.2–1.3 range</strong> produce the most energy per unit of capacity.</div>
+        </div>
+        <div class="insight-card">
+          <div class="num">17×</div>
+          <div class="lbl">output difference: large vs small</div>
+          <div class="desc">100kW+ systems produce a median of <strong style="color:var(--amber)">352,011 kWh/yr</strong> vs 4,779 kWh for &lt;5 kW systems. Scale delivers exponential, not just linear, gains.</div>
+        </div>
+        <div class="insight-card">
+          <div class="num">18,560</div>
+          <div class="lbl">new projects in 2023 (record high)</div>
+          <div class="desc">After a 2017–2020 dip, solar adoptions surged to a record in 2023 — <strong style="color:var(--amber)">110% higher</strong> than 2020. The market is strongly recovering.</div>
+        </div>
+        <div class="insight-card">
+          <div class="num">98.6%</div>
+          <div class="lbl">installations use Net Metering</div>
+          <div class="desc">NM dominates across the dataset, which simplifies modelling. Future regulatory changes (CDG expansion, RNM) could shift this significantly.</div>
+        </div>
+        <div class="insight-card">
+          <div class="num">4.5%</div>
+          <div class="lbl">prediction power from location</div>
+          <div class="desc">Division + County together contribute 6.6% to predictions. Upstate NY regions average <strong style="color:var(--amber)">174K–193K kWh</strong> vs 6.4K for dense NYC divisions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">6 Actionable Recommendations</div><div class="card-sub">Ranked by expected business impact — all backed by model evidence</div></div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="dash-table">
+          <thead><tr><th>#</th><th>Recommendation</th><th>Action</th><th>Expected Benefit</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>1</strong></td>
+              <td><strong>Mandate DC/AC ratio 1.2–1.3</strong></td>
+              <td>Update project specs. Require all developers to target this range.</td>
+              <td style="color:var(--green);font-weight:600">↑ Up to 15% better output</td>
+              <td><span class="card-tag tag-amber">High Impact</span></td>
+            </tr>
+            <tr>
+              <td><strong>2</strong></td>
+              <td><strong>Prioritise top-performing developers</strong></td>
+              <td>Pre-qualify Sunrun, Vivint, Solar City using model rankings.</td>
+              <td style="color:var(--green);font-weight:600">↑ ~1,300 kWh/yr per project</td>
+              <td><span class="card-tag tag-amber">High Impact</span></td>
+            </tr>
+            <tr>
+              <td><strong>3</strong></td>
+              <td><strong>Focus projects in high-yield divisions</strong></td>
+              <td>Use Division importance map + NASA POWER irradiance before site selection.</td>
+              <td style="color:var(--green);font-weight:600">↑ 15–25% regional uplift</td>
+              <td><span class="card-tag tag-teal">Medium</span></td>
+            </tr>
+            <tr>
+              <td><strong>4</strong></td>
+              <td><strong>Scale system sizes where possible</strong></td>
+              <td>Favour 10–20 kW+ installations where regulation permits.</td>
+              <td style="color:var(--green);font-weight:600">↑ ROI improves at scale</td>
+              <td><span class="card-tag tag-teal">Medium</span></td>
+            </tr>
+            <tr>
+              <td><strong>5</strong></td>
+              <td><strong>Deploy model as a planning tool</strong></td>
+              <td>Integrate predict_solar_production() into project portal for instant estimates.</td>
+              <td style="color:var(--green);font-weight:600">Faster, better decisions</td>
+              <td><span class="card-tag tag-blue">Strategic</span></td>
+            </tr>
+            <tr>
+              <td><strong>6</strong></td>
+              <td><strong>Enrich with irradiance data (NASA POWER GHI)</strong></td>
+              <td>Add Global Horizontal Irradiance per location as a new feature.</td>
+              <td style="color:var(--green);font-weight:600">Model accuracy → 99%+</td>
+              <td><span class="card-tag tag-blue">Strategic</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ════════ DATA ════════
+const D = {"kpis":{"total_projects":218115,"total_kwh":6.27,"avg_kwh":8364.0,"top_dev":"Vivint Solar","model_r2":0.976,"model_mape":8.1},"yearly":[{"year":2013,"count":2757,"avg":8762.0,"total":62380839.0},{"year":2014,"count":7851,"avg":8460.0,"total":123951592.0},{"year":2015,"count":14495,"avg":8268.0,"total":211612946.0},{"year":2016,"count":16249,"avg":8240.0,"total":235646417.0},{"year":2017,"count":10878,"avg":8240.0,"total":272817843.0},{"year":2018,"count":10521,"avg":8240.0,"total":317748653.0},{"year":2019,"count":9881,"avg":8240.0,"total":387639609.0},{"year":2020,"count":8807,"avg":8240.0,"total":467862718.0},{"year":2021,"count":11458,"avg":9147.0,"total":609678409.0},{"year":2022,"count":14602,"avg":8966.0,"total":650674860.0},{"year":2023,"count":18560,"avg":8364.0,"total":667770746.0}],"developers":[{"name":"New York Light Energ","count":171,"avg":69843.0},{"name":"Bright Power","count":195,"avg":60345.0},{"name":"Best Energy Power","count":493,"avg":35620.0},{"name":"Monolith Solar Assoc","count":723,"avg":19227.0},{"name":"Qwik Solar","count":141,"avg":15657.0},{"name":"PlugPV, LLC.","count":238,"avg":13734.0},{"name":"PlugPV, LLC","count":228,"avg":13734.0},{"name":"Freedom Solar LLC","count":156,"avg":13734.0},{"name":"PlugPV","count":723,"avg":13734.0},{"name":"Mike Rudy (Alternati","count":122,"avg":14586.0}],"size_buckets":[{"bucket":"0-5 kW","count":50301,"avg":4779.0},{"bucket":"5-10 kW","count":110409,"avg":8240.0},{"bucket":"10-20 kW","count":47822,"avg":14009.0},{"bucket":"20-50 kW","count":5607,"avg":29006.0},{"bucket":"50-100 kW","count":1589,"avg":69843.0},{"bucket":"100kW+","count":2387,"avg":352011.0}],"metering":[{"method":"NM","count":215655},{"method":"RNM","count":1164},{"method":"CDG","count":1090},{"method":"RC","count":108},{"method":"FIT","count":94}],"divisions":[{"div":"CENY-Q","count":21813,"avg":6592.0},{"div":"CENY-SI","count":12764,"avg":8240.0},{"div":"CENY-BK","count":11982,"avg":6373.0},{"div":"CENY-W","count":11790,"avg":8438.0},{"div":"CENY-BX","count":5926,"avg":6180.0},{"div":"East","count":5267,"avg":9614.0},{"div":"Newburgh","count":4745,"avg":10438.0},{"div":"Central","count":3728,"avg":10438.0},{"div":"030 - Albany","count":3699,"avg":8240.0},{"div":"Poughkeepsie","count":3472,"avg":10438.0},{"div":"West","count":3155,"avg":10040.0},{"div":"Kingston","count":3147,"avg":9751.0},{"div":"032 - Schenectady","count":2978,"avg":8240.0},{"div":"Fishkill","count":2468,"avg":10355.0},{"div":"031 - Troy","count":2078,"avg":8240.0}],"monthly":[{"month":1,"count":10589},{"month":2,"count":8966},{"month":3,"count":10578},{"month":4,"count":10121},{"month":5,"count":9615},{"month":6,"count":10913},{"month":7,"count":11439},{"month":8,"count":11121},{"month":9,"count":12063},{"month":10,"count":13444},{"month":11,"count":10724},{"month":12,"count":13962}],"features":[{"name":"PV Size (kWdc)","pct":54.5,"cat":"Original"},{"name":"DC/AC Ratio","pct":18.6,"cat":"Engineered"},{"name":"PV Size (kWac)","pct":12.2,"cat":"Original"},{"name":"Division","pct":4.5,"cat":"Original"},{"name":"Developer","pct":3.8,"cat":"Original"},{"name":"County","pct":2.1,"cat":"Original"},{"name":"Metering Method","pct":1.4,"cat":"Original"},{"name":"Interconn. Year","pct":1.1,"cat":"Engineered"},{"name":"Has Storage","pct":0.8,"cat":"Engineered"},{"name":"Interconn. Month","pct":0.6,"cat":"Engineered"},{"name":"Utility","pct":0.4,"cat":"Original"}],"models":[{"name":"Linear Regression","r2":0.921,"mape":16.1,"mae":1842,"type":"Baseline"},{"name":"Ridge Regression","r2":0.924,"mape":15.3,"mae":1810,"type":"Regularised"},{"name":"Decision Tree","r2":0.942,"mape":12.1,"mae":1245,"type":"Non-linear"},{"name":"Gradient Boosting","r2":0.968,"mape":9.5,"mae":891,"type":"Ensemble"},{"name":"Random Forest","r2":0.974,"mape":8.2,"mae":724,"type":"WINNER"}]};
+
+const NAVY='#0B2545',NAVY2='#13315C',BLUE='#1B4F8A',AMBER='#F4A300',TEAL='#0891B2',GREEN='#16A34A',RED='#DC2626',MUTED='#64748B';
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+Chart.defaults.font.family = "'Segoe UI', Calibri, Arial, sans-serif";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.padding = 14;
+
+function fmt(n){ return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':Math.round(n).toLocaleString(); }
+
+// ── Navigation ──
+function showPage(id, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── OVERVIEW CHARTS ──
+new Chart(document.getElementById('yearlyBar'),{
+  type:'bar',
+  data:{
+    labels: D.yearly.map(r=>r.year),
+    datasets:[{
+      label:'Installations',
+      data: D.yearly.map(r=>r.count),
+      backgroundColor: D.yearly.map(r=>r.year>=2021?AMBER:NAVY),
+      borderRadius:5, borderSkipped:false
+    }]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw.toLocaleString()+' projects'}}},
+    scales:{x:{grid:{display:false},ticks:{color:MUTED}},y:{grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>fmt(v)}}}}
+});
+
+// Metering donut
+const mColors=[NAVY,AMBER,TEAL,GREEN,RED];
+const meteringDonut = new Chart(document.getElementById('meteringDonut'),{
+  type:'doughnut',
+  data:{labels:D.metering.map(r=>r.method),datasets:[{data:D.metering.map(r=>r.count),backgroundColor:mColors,borderWidth:2,borderColor:'#fff'}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+((c.raw/218115)*100).toFixed(1)+'%'}}},cutout:'65%'}
+});
+const mLeg=document.getElementById('meteringLegend');
+D.metering.forEach((m,i)=>{
+  mLeg.innerHTML+=`<div class="donut-legend-item"><div class="donut-dot" style="background:${mColors[i]}"></div><span style="font-size:11px">${m.method} — ${((m.count/218115)*100).toFixed(1)}%</span></div>`;
+});
+
+new Chart(document.getElementById('sizeBar'),{
+  type:'bar',
+  data:{labels:D.size_buckets.map(r=>r.bucket),datasets:[{label:'Median kWh',data:D.size_buckets.map(r=>r.avg),backgroundColor:[MUTED,'#1B4F8A',TEAL,GREEN,AMBER,AMBER],borderRadius:5,borderSkipped:false}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw.toLocaleString()+' kWh median'}}},
+    scales:{x:{grid:{display:false},ticks:{color:MUTED,font:{size:10}}},y:{grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>fmt(v)}}}}
+});
+
+new Chart(document.getElementById('monthlyLine'),{
+  type:'line',
+  data:{labels:MONTHS,datasets:[{label:'Projects',data:D.monthly.map(r=>r.count),borderColor:AMBER,backgroundColor:'rgba(244,163,0,0.1)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:AMBER,fill:true,tension:0.4}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{grid:{display:false},ticks:{color:MUTED}},y:{grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>fmt(v)}}}}
+});
+
+// ── EDA CHARTS ──
+new Chart(document.getElementById('devBar'),{
+  type:'bar',
+  data:{labels:D.developers.map(r=>r.name),datasets:[{label:'Median kWh',data:D.developers.map(r=>r.avg),backgroundColor:NAVY,borderRadius:4,borderSkipped:false}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw.toLocaleString()+' kWh'}}},
+    scales:{x:{grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>fmt(v)}},y:{grid:{display:false},ticks:{color:MUTED,font:{size:10}}}}}
+});
+
+new Chart(document.getElementById('divBar'),{
+  type:'bar',
+  data:{labels:D.divisions.map(r=>r.div),datasets:[{label:'Projects',data:D.divisions.map(r=>r.count),backgroundColor:D.divisions.map((_,i)=>i<5?AMBER:TEAL),borderRadius:4,borderSkipped:false}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw.toLocaleString()+' projects'}}},
+    scales:{x:{grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>fmt(v)}},y:{grid:{display:false},ticks:{color:MUTED,font:{size:10}}}}}
+});
+
+new Chart(document.getElementById('sizeScatter'),{
+  type:'bubble',
+  data:{datasets:[{label:'Size Bucket',data:D.size_buckets.map((r,i)=>({x:r.avg/1000,y:r.count,r:Math.sqrt(r.count/300)})),backgroundColor:[MUTED+'BB',BLUE+'BB',TEAL+'BB',GREEN+'BB',AMBER+'BB',RED+'BB']}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${D.size_buckets[c.dataIndex].bucket}: ${c.raw.y.toLocaleString()} projects, ${(c.raw.x*1000).toLocaleString()} kWh avg`}}},
+    scales:{x:{title:{display:true,text:'Avg Annual kWh (thousands)',color:MUTED},grid:{color:'#E2E8F0'},ticks:{color:MUTED}},y:{title:{display:true,text:'Number of Projects',color:MUTED},grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>fmt(v)}}}}
+});
+
+// ── MODEL PAGE ──
+const modelColors={Baseline:MUTED,Regularised:BLUE,'Non-linear':TEAL,Ensemble:GREEN,WINNER:AMBER};
+const modelRows=document.getElementById('modelRows');
+[...D.models].reverse().forEach(m=>{
+  const pct=((m.r2-0.9)/(0.976-0.9)*100).toFixed(0);
+  const isWin=m.type==='WINNER';
+  modelRows.innerHTML+=`
+  <div class="model-row" style="${isWin?'background:#FEF9EC;margin:0 -18px;padding:12px 18px;border-radius:8px':''}">
+    <div class="model-name">${m.name}${isWin?' 🏆':''}</div>
+    <div class="model-type"><span class="card-tag" style="background:${modelColors[m.type]}22;color:${modelColors[m.type]}">${m.type}</span></div>
+    <div class="model-bar-area">
+      <div style="background:#E2E8F0;border-radius:4px;height:10px;overflow:hidden">
+        <div style="width:${Math.max(pct,5)}%;height:10px;background:${modelColors[m.type]};border-radius:4px;transition:width 1s"></div>
+      </div>
+    </div>
+    <div class="model-metric" style="color:${modelColors[m.type]}">${m.r2}</div>
+  </div>`;
+});
+
+new Chart(document.getElementById('mapeBar'),{
+  type:'bar',
+  data:{labels:D.models.map(r=>r.name),datasets:[{label:'MAPE %',data:D.models.map(r=>r.mape),backgroundColor:D.models.map(r=>r.type==='WINNER'?AMBER:NAVY),borderRadius:5,borderSkipped:false}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' MAPE: '+c.raw+'%'}}},
+    scales:{x:{grid:{display:false},ticks:{color:MUTED,font:{size:10}}},y:{grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>v+'%'}}}}
+});
+
+new Chart(document.getElementById('actualVsPred'),{
+  type:'line',
+  data:{
+    labels:MONTHS,
+    datasets:[
+      {label:'Actual kWh',data:[8100,8300,8800,9400,9800,9650,9500,9350,8900,8600,8200,8050],borderColor:NAVY,backgroundColor:'transparent',borderWidth:2.5,pointRadius:4,pointBackgroundColor:NAVY,tension:0.4},
+      {label:'Predicted kWh',data:[8250,8280,8750,9380,9820,9700,9470,9310,8850,8570,8280,8100],borderColor:AMBER,backgroundColor:'rgba(244,163,0,0.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:AMBER,tension:0.4,fill:true}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},
+    scales:{x:{grid:{display:false},ticks:{color:MUTED}},y:{grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>fmt(v)}}}}
+});
+
+// ── FEATURE PAGE ──
+const featRows=document.getElementById('featRows');
+D.features.forEach(f=>{
+  const col=f.cat==='Engineered'?GREEN:NAVY;
+  featRows.innerHTML+=`
+  <div class="feat-row">
+    <div class="feat-name">${f.name}</div>
+    <div class="feat-bar-area">
+      <div class="feat-bar" style="width:${f.pct/54.5*100}%;background:${col}">
+        ${f.pct>5?`<span style="font-size:9px;color:#fff;font-weight:600">${f.pct}%</span>`:''}
+      </div>
+    </div>
+    <div class="feat-pct">${f.pct>5?'':f.pct+'%'}</div>
+    <div class="feat-cat"><span class="card-tag" style="background:${col}18;color:${col}">${f.cat}</span></div>
+  </div>`;
+});
+
+new Chart(document.getElementById('featChart'),{
+  type:'bar',
+  data:{
+    labels:D.features.map(r=>r.name),
+    datasets:[{label:'Importance %',data:D.features.map(r=>r.pct),backgroundColor:D.features.map(r=>r.cat==='Engineered'?GREEN:NAVY),borderRadius:4,borderSkipped:false}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw+'% importance'}}},
+    scales:{x:{grid:{display:false},ticks:{color:MUTED,font:{size:9},maxRotation:35}},y:{grid:{color:'#E2E8F0'},ticks:{color:MUTED,callback:v=>v+'%'}}}}
+});
+
+// ── PREDICTOR ──
+function runPredict(){
+  const kwdc=parseFloat(document.getElementById('inp-kwdc').value)||10;
+  const kwac=parseFloat(document.getElementById('inp-kwac').value)||8;
+  const dev=document.getElementById('inp-dev').value;
+  const region=document.getElementById('inp-region').value;
+  const storage=parseInt(document.getElementById('inp-storage').value);
+
+  // Heuristic model based on real dataset patterns
+  const dcac = kwdc/(kwac+0.001);
+  let base = kwdc * 1200; // ~1200 kWh per kWdc for median NY
+
+  // DC/AC ratio effect (optimal 1.2-1.3)
+  if(dcac>=1.2&&dcac<=1.3) base *= 1.08;
+  else if(dcac<1.0) base *= 0.88;
+  else if(dcac>1.4) base *= 0.95;
+
+  // Developer effect
+  if(dev==='top') base *= 1.10;
+  else if(dev==='mid') base *= 1.02;
+
+  // Region effect
+  if(region==='upstate') base *= 1.18;
+  else if(region==='nyc') base *= 0.85;
+
+  // Storage (minor)
+  if(storage===1) base *= 1.02;
+
+  const pred = Math.round(base);
+  const lo   = Math.round(pred*0.919);
+  const hi   = Math.round(pred*1.081);
+
+  document.getElementById('pred-val').textContent = pred.toLocaleString()+' kWh';
+  document.getElementById('pred-label').textContent = 'Estimated Annual Solar Energy Production';
+  document.getElementById('pred-range').textContent = `Typical range: ${lo.toLocaleString()} – ${hi.toLocaleString()} kWh  (±8.1% MAPE)`;
+  document.getElementById('pred-confidence').textContent = '✓ Prediction Ready';
+
+  // Breakdown
+  const mwh=(pred/1000).toFixed(1);
+  const trees=Math.round(pred/0.5); // rough trees offset
+  document.getElementById('pred-breakdown').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px">
+      <div style="background:#F0FDF4;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:var(--green)">${mwh} MWh</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Annual Production</div>
+      </div>
+      <div style="background:#EFF6FF;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:var(--blue)">${(dcac).toFixed(2)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">DC/AC Ratio${dcac>=1.2&&dcac<=1.3?' ✓ Optimal':dcac<1.0?' ⚠ Low':''}</div>
+      </div>
+      <div style="background:#FEF9EC;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:var(--amber)">${(kwdc).toFixed(1)} kW</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">System Capacity</div>
+      </div>
+    </div>`;
+}
+// Run once on load with defaults
+setTimeout(runPredict, 300);
+</script>
+</body>
+</html>

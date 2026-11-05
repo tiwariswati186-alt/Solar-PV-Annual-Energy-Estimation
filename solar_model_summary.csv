@@ -1,0 +1,6 @@
+Metric,Value
+R² Score,0.9998
+MAE (kWh),187.37
+RMSE (kWh),3945.44
+MAPE (%),0.08
+Test Samples,20031.0
