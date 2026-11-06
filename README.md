@@ -1,4 +1,4 @@
-# ☀️ Solar Energy Production Forecasting
+# ☀️ Solar PV Annual Energy Estimation
 
 A machine learning project designed to forecast annual solar photovoltaic (PV) energy production (kWh) based on system characteristics, geography, and timing.
 
