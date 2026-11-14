@@ -3,7 +3,7 @@
 A machine learning project designed to forecast annual solar photovoltaic (PV) energy production (kWh) based on system characteristics, geography, and timing.
 
 ## 🔗 Live Application & Assets
-* **Live Streamlit Web App:** https://solar-energy-appuction-forecasting-gscfrapb8rdgbxgr2okzar.streamlit.app/
+* **Live Streamlit Web App:** https://swati-solar-energy-forecasting.streamlit.app/
 * **Trained Model Artifact:** `solar_model.pkl`
 * **BI Dashboard Assets:** Included in root directory for instant Power BI deployment.
 
